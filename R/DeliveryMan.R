@@ -33,7 +33,7 @@ PriorityQueue <- function() {
     head <- values[[1]]
     values <<- values[-1]
     keys <<- keys[-1]
-    return(head)
+    return (head)
   }
   empty <- function() length(keys) == 0
   getValueIndex <- function(value) which(values %in% list(value) == TRUE)
@@ -55,26 +55,45 @@ List <- function() {
 }
 
 # Return the euclidean distance between two locations
-# TODO: Implement
-getEuclideanDistance=function(fromX, fromY, toX, toY) {
-  return (0)
+getEuclideanDistance=function(from, to) {
+  return (sqrt((from[1] - to[1])^2 + (from[2] - to[2])^2))
+}
+
+# Return the cost of a vertical edge
+getVerticalEdgeCost=function(roads, car, neighbor) {
+  if(car$y < neighbor[2]) {
+    # Moving up
+    return (roads$vroads[car$y, car$x])
+  } else {
+    # Moving down
+    return (roads$vroads[neighbor[2], neighbor[1]])
+  }
+}
+
+# Return the cost of a horizontal edge
+getHorizontalEdgeCost=function(roads, car, neighbor) {
+  if(car$x < neighbor[1]) {
+    # Moving left
+    return (roads$hroads[neighbor[2], neighbor[1]])
+  } else {
+    # Moving right
+    return (roads$vroads[car$y, car$x])
+  }
 }
 
 # Calculate edge cost (from current position to neighbor position)
-# TODO: Verify correctness of edges cost logic
 getEdgeCost=function(roads, car, neighbor) {
-  if(car$x == neighbor[1]) {
-    # Moving vertically
-    return (roads$vroads[neighbor[1], neighbor[2]])
+  isMovingVertically = car$x == neighbor[1]
+  if(isMovingVertically) {
+    return (getVerticalEdgeCost(roads, car, neighbor))
   } else {
-    # Moving horizontally
-    return (roads$hroads[neighbor[1], neighbor[2]])
+    return (getHorizontalEdgeCost(roads, car, neighbor))
   }
 }
 
 # Return the cost of an edge + a heuristic
-getCombinedCost=function(roads, car, neighbor) {
-  return (getEdgeCost(roads, car, neighbor) + getEuclideanDistance())
+getCombinedCost=function(roads, car, neighbor, goal) {
+  return (getEdgeCost(roads, car, neighbor) + getEuclideanDistance(neighbor, goal))
 }
 
 # Return true if car is loaded, false otherwise
@@ -121,7 +140,7 @@ aStarSearch=function(goal, roads, car, packages) {
   # Add nodes to frontier by combined cost as priority
   for (i in 1:dim(neighbors)[1]) {
     neighbor = neighbors[i,]
-    combinedCost = getCombinedCost(roads, car, neighbor)
+    combinedCost = getCombinedCost(roads, car, neighbor, goal)
     frontier$insert(combinedCost, neighbor)
   }
 
@@ -131,18 +150,19 @@ aStarSearch=function(goal, roads, car, packages) {
   }
 
   # TODO: Return best move towards goal (using A* search)
-  return(dumbDM(rodas, car, packages))
+  return (dumbDM(rodas, car, packages))
 }
 
 # Get next move to solve the DeliveryMan assignment using the A* search
 aStarSearchDM=function(roads, car, packages) {
   if(isLoaded(car)) {
     # TODO: Find closest path towards delivery location
-    # return(aStarSearch(packageDeliveryLocation, roads, car, packages))
+    # return (aStarSearch(packageDeliveryLocation, roads, car, packages))
   } else {
     # Find closest package to pickup
     car$mem$goalPackage = getGoalPackage(car, packages)
-    return(aStarSearch(car$mem$goalPackage, roads, car, packages))
+    goal = car$mem$goalPackage[1:2]
+    return (aStarSearch(goal, roads, car, packages))
   }
 }
 
