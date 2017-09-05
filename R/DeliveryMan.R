@@ -9,9 +9,21 @@ dumbDM=function(roads,car,packages){
 # Source: http://rosettacode.org/wiki/Priority_queue#R
 PriorityQueue <- function() {
   keys <<- values <<- NULL
-  # TODO: Verify if the value is already stored in the queue, if so
-  # replace only when key (cost) is smaller than current one, otherwise ignore it
   insert <- function(key, value) {
+    # If node already exists on queue, and this new addition is better,
+    # delete previous one and insert this new one instead
+    index = getValueIndex(value)
+    if(length(index) > 0) {
+      if(key <= keys[[index]]) {
+        keys <<- keys[-index]
+        values <<- values[-index]
+      } else {
+        # Ignore it, we already have a cheaper path
+        return (NULL)
+      }
+    }
+
+    # Insert new value in queue
     temp <- c(keys, key)
     ord <- order(temp)
     keys <<- temp[ord]
@@ -24,6 +36,7 @@ PriorityQueue <- function() {
     return(head)
   }
   empty <- function() length(keys) == 0
+  getValueIndex <- function(value) which(values %in% list(value) == TRUE)
   list(insert = insert, pop = pop, empty = empty)
 }
 
@@ -117,7 +130,8 @@ aStarSearch=function(goal, roads, car, packages) {
     # TODO: Implement A* search loop
   }
 
-  # return move
+  # TODO: Return best move towards goal (using A* search)
+  return(dumbDM(rodas, car, packages))
 }
 
 # Get next move to solve the DeliveryMan assignment using the A* search
