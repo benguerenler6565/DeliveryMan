@@ -1,6 +1,9 @@
 ?seq.along
 dumbDM=function(roads,car,packages){
   car$nextMove=sample(c(2,4,6,8),1)
+  
+  browser()
+  
   return (car)
 }
 
@@ -102,9 +105,10 @@ isLoaded=function(car) {
 }
 
 # Return all available neighbors given a location
+#we need to past the size both x and y size roads?
 getNeighbors=function(x, y) {
   neighbors = matrix(, nrow = 4, ncol=2, byrow = TRUE)
-
+  
   # Add all possible horizontal neighbors
   neighbors[,1] = c(x - 1, x, x, x + 1)
   # Add all possible vertical neighbors
@@ -113,6 +117,13 @@ getNeighbors=function(x, y) {
   # Remove all lower bound positions (< 0)
   neighbors = neighbors[neighbors[,1] > 0,]
   neighbors = neighbors[neighbors[,2] > 0,]
+    
+  #Remove all upper bound positions (>10)
+  #change 11 by size
+  neighbors = neighbors[neighbors[,1] < 11,]
+  neighbors = neighbors[neighbors[,2] < 11,]
+  
+  browser()
 
   # TODO: Missing out of bound positions too (< size of matrix)
   return (neighbors)
@@ -134,7 +145,7 @@ aStarSearch=function(goal, roads, car, packages) {
   visited = List()
   frontier = PriorityQueue()
 
-  # Find all neighbors
+  # Find all neighbors i can add roads
   neighbors = getNeighbors(car$x, car$y)
 
   # Add nodes to frontier by combined cost as priority
