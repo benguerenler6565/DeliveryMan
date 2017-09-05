@@ -102,9 +102,8 @@ isLoaded=function(car) {
 }
 
 # Return all available neighbors given a location
-getNeighbors=function(x, y) {
+getNeighbors=function(x, y, xSize, ySize) {
   neighbors = matrix(, nrow = 4, ncol=2, byrow = TRUE)
-
   # Add all possible horizontal neighbors
   neighbors[,1] = c(x - 1, x, x, x + 1)
   # Add all possible vertical neighbors
@@ -114,7 +113,9 @@ getNeighbors=function(x, y) {
   neighbors = neighbors[neighbors[,1] > 0,]
   neighbors = neighbors[neighbors[,2] > 0,]
 
-  # TODO: Missing out of bound positions too (< size of matrix)
+  # Remove all out of bound positions too (< size of matrix)
+  neighbors = neighbors[neighbors[,1] < xSize,]
+  neighbors = neighbors[neighbors[,2] < ySize,]
   return (neighbors)
 }
 
@@ -134,8 +135,11 @@ aStarSearch=function(goal, roads, car, packages) {
   visited = List()
   frontier = PriorityQueue()
 
+  # Get the matrix size
+  xSize = dim(roads$hroads)[1]
+  ySize = dim(roads$vroads)[2]
   # Find all neighbors
-  neighbors = getNeighbors(car$x, car$y)
+  neighbors = getNeighbors(car$x, car$y, xSize, ySize)
 
   # Add nodes to frontier by combined cost as priority
   for (i in 1:dim(neighbors)[1]) {
