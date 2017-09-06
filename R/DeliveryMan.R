@@ -8,15 +8,15 @@ dumbDM=function(roads,car,packages){
 # and order them by priority
 # Source: http://rosettacode.org/wiki/Priority_queue#R
 PriorityQueue <- function() {
-  keys <<- values <<- NULL
+  queueKeys <<- queueValues <<- NULL
   insert <- function(key, value) {
     # If node already exists on queue, and this new addition is better,
     # delete previous one and insert this new one instead
     index = getValueIndex(value)
     if(length(index) > 0) {
-      if(key <= keys[[index]]) {
-        keys <<- keys[-index]
-        values <<- values[-index]
+      if(isTRUE(key <= queueKeys[[index]])) {
+        queueKeys <<- queueKeys[-index]
+        queueValues <<- queueValues[-index]
       } else {
         # Ignore it, we already have a cheaper path
         return (NULL)
@@ -24,34 +24,32 @@ PriorityQueue <- function() {
     }
 
     # Insert new value in queue
-    temp <- c(keys, key)
+    temp <- c(queueKeys, key)
     ord <- order(temp)
-    keys <<- temp[ord]
-    values <<- c(values, list(value))[ord]
+    queueKeys <<- temp[ord]
+    queueValues <<- c(queueValues, list(value))[ord]
   }
   pop <- function() {
-    head <- values[[1]]
-    values <<- values[-1]
-    keys <<- keys[-1]
+    head <- queueValues[[1]]
+    queueValues <<- queueValues[-1]
+    queueKeys <<- queueKeys[-1]
     return (head)
   }
-  empty <- function() length(keys) == 0
-  getValueIndex <- function(value) which(values %in% list(value) == TRUE)
-  list(insert = insert, pop = pop, empty = empty)
+  empty <- function() length(queueKeys) == 0
+  getValueIndex <- function(value) which(queueValues %in% list(value) == TRUE)
+  getAllValues <- function() queueValues
+  list(insert = insert, pop = pop, empty = empty, getAllValues = getAllValues)
 }
 
 # A simple lists which allows to insert elements on it
 # and verity if a particular element exists or not
-# TODO: Implement
 List <- function() {
-  values <<- NULL
-  insert <- function(value) {
-    return (values)
-  }
-  exists <- function(value) {
-    return (FALSE)
-  }
-  list(insert = insert, exists = exists)
+  listValues <<- NULL
+  insert <- function(value) listValues <<- c(listValues, list(value))
+  exists <- function(value) isTRUE(which(listValues %in% list(value) == TRUE) > 0)
+  empty <- function() length(listValues) == 0
+  getAllValues <- function() listValues
+  list(insert = insert, exists = exists, empty = empty, getAllValues = getAllValues)
 }
 
 # Return the euclidean distance between two locations
@@ -129,32 +127,49 @@ getGoalPackage=function(car, packages) {
   }
 }
 
+# Return true if node is goal, false otherwise
+isGoal=function(neighbor, goal) {
+  return (goal[1] == neighbor[1] && goal[2] == neighbor[2])
+}
+
 # Perform A* search from current car location towards goal
 aStarSearch=function(goal, roads, car, packages) {
+  # Get the matrix size
+  xSize = dim(roads$hroads)[1]
+  ySize = dim(roads$vroads)[2]
+
   # Initialize visited and frontier lists
   visited = List()
   frontier = PriorityQueue()
 
-  # Get the matrix size
-  xSize = dim(roads$hroads)[1]
-  ySize = dim(roads$vroads)[2]
-  # Find all neighbors
-  neighbors = getNeighbors(car$x, car$y, xSize, ySize)
-
-  # Add nodes to frontier by combined cost as priority
-  for (i in 1:dim(neighbors)[1]) {
-    neighbor = neighbors[i,]
-    combinedCost = getCombinedCost(roads, car, neighbor, goal)
-    frontier$insert(combinedCost, neighbor)
-  }
+  # Put the starting location on the frontier (cost 0 is fine)
+  frontier$insert(0, c(car$x, car$y))
 
   while (!frontier$empty()) {
+    # Get node with the least f on the frontier
     node = frontier$pop()
-    # TODO: Implement A* search loop
-  }
 
-  # TODO: Return best move towards goal (using A* search)
-  return (dumbDM(rodas, car, packages))
+    # Only search this node if it hasn't been searched already
+    if(!visited$exists(node)) {
+      # Get node's neighbors
+      neighbors = getNeighbors(node[1], node[2], xSize, ySize)
+
+      for (i in 1:dim(neighbors)[1]) {
+        neighbor = neighbors[i,]
+        if(isGoal(neighbor, goal)) {
+          # Return the visited path + current node as path to goal
+          return (c(visited$getAllValues(), list(node)))
+        } else {
+          # Add neighbor to frontier
+          combinedCost = getCombinedCost(roads, car, neighbor, goal)
+          frontier$insert(combinedCost, neighbor)
+        }
+      }
+
+      # Keep track of best path
+      visited$insert(node)
+    }
+  }
 }
 
 # Get next move to solve the DeliveryMan assignment using the A* search
@@ -166,8 +181,9 @@ aStarSearchDM=function(roads, car, packages) {
     # Find closest package to pickup
     car$mem$goalPackage = getGoalPackage(car, packages)
     goal = car$mem$goalPackage[1:2]
-    return (aStarSearch(goal, roads, car, packages))
+    path = aStarSearch(goal, roads, car, packages)
   }
+  return(basicDM(roads, car, packages))
 }
 
 basicDM=function(roads,car,packages) {
