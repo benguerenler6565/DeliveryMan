@@ -112,6 +112,7 @@ getNeighbors=function(x, y, xSize, ySize) {
   neighbors = neighbors[neighbors[,2] > 0,]
 
   # Remove all out of bound positions too (< size of matrix)
+  # TODO: Fix error 'Error in neighbors[, 2] : incorrect number of dimensions'
   neighbors = neighbors[neighbors[,1] < xSize,]
   neighbors = neighbors[neighbors[,2] < ySize,]
   return (neighbors)
@@ -174,15 +175,30 @@ aStarSearch=function(goal, roads, car, packages) {
 
 # Get next move to solve the DeliveryMan assignment using the A* search
 aStarSearchDM=function(roads, car, packages) {
+  nextMove = 0
   if(isLoaded(car)) {
-    # TODO: Find closest path towards delivery location
-    # return (aStarSearch(packageDeliveryLocation, roads, car, packages))
+    # TODO: Find delivery location
+    # car$mem$goalPackage = NULL (we are now delivering)
+    # goal = getDeliveryLocation(packages)
+    # goal = car$mem$goalPackage[1:2]
+    # bestPath = aStarSearch(goal, roads, car, packages)
+    # nextMove = generateNextMove(bestPath)
   } else {
-    # Find closest package to pickup
+    # It's necessary to remember if we are already 'driving' towards
+    # a package, otherwise we'll be trap in an infinite loop. So we save
+    # which package we are currently trying to pickup in 'mem$goalPackage'
     car$mem$goalPackage = getGoalPackage(car, packages)
     goal = car$mem$goalPackage[1:2]
-    path = aStarSearch(goal, roads, car, packages)
+    bestPath = aStarSearch(goal, roads, car, packages)
+    # nextMove = generateNextMove(bestPath)
   }
+
+  # TODO: Return this instead
+  # car$nextMove=nextMove
+  # car$mem=list()
+  # return (car)
+
+  # TODO: Remove
   return(basicDM(roads, car, packages))
 }
 
