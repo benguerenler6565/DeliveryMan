@@ -52,7 +52,12 @@ List <- function() {
   list(insert = insert, exists = exists, empty = empty, getAllValues = getAllValues)
 }
 
-# Return the euclidean distance between two locations
+# Returns the Manhattan distance between two locations
+getManhattanDistance=function(from, to) {
+  return (abs(from[1] - to[1]) + abs(from[2] - to[2]))
+}
+
+# Return the Euclidean distance between two locations
 getEuclideanDistance=function(from, to) {
   return (sqrt((from[1] - to[1])^2 + (from[2] - to[2])^2))
 }
@@ -94,11 +99,6 @@ getCombinedCost=function(roads, car, neighbor, goal) {
   return (getEdgeCost(roads, car, neighbor) + getEuclideanDistance(neighbor, goal))
 }
 
-# Return true if car is loaded, false otherwise
-isLoaded=function(car) {
-  return (car$load != 0)
-}
-
 # Return all available neighbors given a location
 getNeighbors=function(x, y, xSize, ySize) {
   neighbors = matrix(, nrow = 4, ncol=2, byrow = TRUE)
@@ -121,9 +121,11 @@ getNeighbors=function(x, y, xSize, ySize) {
 # Return the package goal for a search
 getGoalPackage=function(car, packages) {
   if(is.null(car$mem$goalPackage)) {
-    # TODO: Find the closest pickup package
-    return (packages[1,])
+    # Pickup first unloaded package from the list (TODO: Find the closest pickup package)
+    packageIndex = which(packages[,5] %in% c(0) == TRUE)[1]
+    return (packages[packageIndex,])
   } else {
+    # We are already driving towards a package, keep doing that
     return (car$mem$goalPackage)
   }
 }
@@ -159,7 +161,7 @@ aStarSearch=function(goal, roads, car, packages) {
         neighbor = neighbors[i,]
         if(isGoal(neighbor, goal)) {
           # Return the visited path + current node as path to goal
-          return (c(visited$getAllValues(), list(node)))
+          return (c(visited$getAllValues(), list(node), list(goal)))
         } else {
           # Add neighbor to frontier
           combinedCost = getCombinedCost(roads, car, neighbor, goal)
@@ -173,6 +175,35 @@ aStarSearch=function(goal, roads, car, packages) {
   }
 }
 
+# Given the list of visited nodes, return the best next move car can make towards goal
+generateNextMove=function(visited) {
+  currX = visited[[1]][1]
+  currY = visited[[1]][2]
+  nextX = visited[[2]][1]
+  nextY = visited[[2]][2]
+
+  # Move is horizontal
+  if (isTRUE(nextX > currX)) {
+    return (6) # Right
+  }
+  if (isTRUE(nextX < currX)) {
+    return (4) # Left
+  }
+
+  # Move is vertical
+  if (isTRUE(nextY > currY)) {
+    return (8) # Up
+  }
+  if (isTRUE(nextY < currY)) {
+    return (2) # Down
+  }
+}
+
+# Return true if car is loaded, false otherwise
+isLoaded=function(car) {
+  return (car$load != 0)
+}
+
 # Get next move to solve the DeliveryMan assignment using the A* search
 aStarSearchDM=function(roads, car, packages) {
   nextMove = 0
@@ -181,25 +212,21 @@ aStarSearchDM=function(roads, car, packages) {
     # car$mem$goalPackage = NULL (we are now delivering)
     # goal = getDeliveryLocation(packages)
     # goal = car$mem$goalPackage[1:2]
-    # bestPath = aStarSearch(goal, roads, car, packages)
-    # nextMove = generateNextMove(bestPath)
+    # visited = aStarSearch(goal, roads, car, packages)
+    # nextMove = generateNextMove(visited)
+    return(basicDM(roads, car, packages))
   } else {
     # It's necessary to remember if we are already 'driving' towards
     # a package, otherwise we'll be trap in an infinite loop. So we save
     # which package we are currently trying to pickup in 'mem$goalPackage'
     car$mem$goalPackage = getGoalPackage(car, packages)
     goal = car$mem$goalPackage[1:2]
-    bestPath = aStarSearch(goal, roads, car, packages)
-    # nextMove = generateNextMove(bestPath)
+    visited = aStarSearch(goal, roads, car, packages)
+    nextMove = generateNextMove(visited)
   }
 
-  # TODO: Return this instead
-  # car$nextMove=nextMove
-  # car$mem=list()
-  # return (car)
-
-  # TODO: Remove
-  return(basicDM(roads, car, packages))
+  car$nextMove = nextMove
+  return (car)
 }
 
 basicDM=function(roads,car,packages) {
