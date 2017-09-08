@@ -223,19 +223,21 @@ isLoaded=function(car) {
   return (car$load != 0)
 }
 
+# Return the delivery location of the package which is currently loaded
+getDeliveryLocation=function(packages) {
+  return (packages[which(packages[,5] %in% c(1) == TRUE),])
+}
+
 # Get next move to solve the DeliveryMan assignment using the A* search
 aStarSearchDM=function(roads, car, packages) {
   nextMove = 0
   if(isLoaded(car)) {
-    # TODO: Find delivery location
-    # car$mem$goalPackage = NULL (we are now delivering)
-    # goal = getDeliveryLocation(packages)
-    # goal = car$mem$goalPackage[1:2]
-    # visited = aStarSearch(goal, roads, car, packages)
-    # nextMove = generateNextMove(visited)
-    return(basicDM(roads, car, packages))
+    car$mem$goalPackage = NULL
+    goal = getDeliveryLocation(packages)[3:4]
+    visited = aStarSearch(goal, roads, car, packages)
+    nextMove = generateNextMove(visited)
   } else {
-    # It's necessary to remember if we are already 'driving' towards
+    # We want to remember if we are already 'driving' towards
     # a package, otherwise we'll be trap in an infinite loop. So we save
     # which package we are currently trying to pickup in 'mem$goalPackage'
     car$mem$goalPackage = getGoalPackage(car, packages)
@@ -472,5 +474,3 @@ updateRoads<-function(hroads,vroads) {
   }
   list (hroads=hroads,vroads=vroads)
 }
-
-
