@@ -122,46 +122,54 @@ isGoal=function(neighbor, goal) {
 
 # Perform A* search from current car location towards goal
 aStarSearch=function(goal, roads, car, packages) {
-  # Get the matrix size
-  xSize = dim(roads$hroads)[1]
-  ySize = dim(roads$vroads)[2]
+  startPosition = c(car$x, car$y)
+  if(isGoal(startPosition, goal)) {
+    return (NULL) # Current position is already goal
+  } else {
+    # Get the matrix size
+    xSize = dim(roads$hroads)[1]
+    ySize = dim(roads$vroads)[2]
 
-  # Initialize visited and frontier lists
-  visited = List()
-  frontier = PriorityQueue()
+    # Initialize visited and frontier lists
+    visited = List()
+    frontier = PriorityQueue()
+    # Put the starting location on the frontier (cost 0 is fine)
+    frontier$insert(0, startPosition)
 
-  # Put the starting location on the frontier (cost 0 is fine)
-  frontier$insert(0, c(car$x, car$y))
+    while (!frontier$empty()) {
+      # Get node with the least f on the frontier
+      node = frontier$pop()
+      neighbors = getNeighbors(node[1], node[2], xSize, ySize)
 
-  while (!frontier$empty()) {
-    # Get node with the least f on the frontier
-    node = frontier$pop()
-    neighbors = getNeighbors(node[1], node[2], xSize, ySize)
+      for (i in 1:dim(neighbors)[1]) {
+        neighbor = neighbors[i,]
+        # Only search neighbors which hasn't already being visited
+        if(visited$exists(neighbor)) {
+          next
+        }
 
-    for (i in 1:dim(neighbors)[1]) {
-      neighbor = neighbors[i,]
-      # Only search neighbors which hasn't already being visited
-      if(visited$exists(neighbor)) {
-        next
+        if(isGoal(neighbor, goal)) {
+          # Return the visited path + current node as path to goal
+          return (c(visited$getAllValues(), list(node), list(goal[1:2])))
+        } else {
+          # Add neighbor to frontier
+          combinedCost = getCombinedCost(roads, car, neighbor, goal)
+          frontier$insert(combinedCost, neighbor)
+        }
       }
 
-      if(isGoal(neighbor, goal)) {
-        # Return the visited path + current node as path to goal
-        return (c(visited$getAllValues(), list(node), list(goal[1:2])))
-      } else {
-        # Add neighbor to frontier
-        combinedCost = getCombinedCost(roads, car, neighbor, goal)
-        frontier$insert(combinedCost, neighbor)
-      }
+      # Keep track of best path
+      visited$insert(node)
     }
-
-    # Keep track of best path
-    visited$insert(node)
   }
 }
 
 # Given the list of visited nodes, return the best next move car can make towards goal
 generateNextMove=function(visited) {
+  if(isTRUE(is.null(visited))) {
+    return (5) # Current position is already goal
+  }
+
   currX = visited[[1]][1]
   currY = visited[[1]][2]
   nextX = visited[[2]][1]
