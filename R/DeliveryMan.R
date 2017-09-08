@@ -112,9 +112,9 @@ getNeighbors=function(x, y, xSize, ySize) {
   neighbors = neighbors[neighbors[,2] > 0,]
 
   # Remove all out of bound positions too (< size of matrix)
-  # TODO: Fix error 'Error in neighbors[, 2] : incorrect number of dimensions'
-  neighbors = neighbors[neighbors[,1] < xSize,]
-  neighbors = neighbors[neighbors[,2] < ySize,]
+  neighbors = neighbors[neighbors[,1] < xSize+1,]
+  neighbors = neighbors[neighbors[,2] < ySize+1,]
+
   return (neighbors)
 }
 
