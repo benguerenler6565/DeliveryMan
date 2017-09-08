@@ -64,24 +64,34 @@ getEuclideanDistance=function(from, to) {
 
 # Return the cost of a vertical edge
 getVerticalEdgeCost=function(roads, car, neighbor) {
-  if(car$y < neighbor[2]) {
-    # Moving up
-    return (roads$vroads[car$y, car$x])
-  } else {
-    # Moving down
-    return (roads$vroads[neighbor[2], neighbor[1]])
-  }
+  tryCatch({
+    if(car$y < neighbor[2]) {
+      # Moving up
+      return (roads$vroads[car$y, car$x])
+    } else {
+      # Moving down
+      return (roads$vroads[neighbor[2], neighbor[1]])
+    }
+  }, error = function(e) {
+    print('Error on: getVerticalEdgeCost')
+    browser()
+  })
 }
 
 # Return the cost of a horizontal edge
 getHorizontalEdgeCost=function(roads, car, neighbor) {
-  if(car$x < neighbor[1]) {
-    # Moving left
-    return (roads$hroads[neighbor[2], neighbor[1]])
-  } else {
-    # Moving right
-    return (roads$vroads[car$y, car$x])
-  }
+  tryCatch({
+    if(car$x < neighbor[1]) {
+      # Moving left
+      return (roads$hroads[neighbor[2], neighbor[1]])
+    } else {
+      # Moving right
+      return (roads$vroads[car$y, car$x])
+    }
+  }, error = function(e) {
+    print('Error on: getHorizontalEdgeCost')
+    browser()
+  })
 }
 
 # Calculate edge cost (from current position to neighbor position)
@@ -96,7 +106,7 @@ getEdgeCost=function(roads, car, neighbor) {
 
 # Return the cost of an edge + a heuristic
 getCombinedCost=function(roads, car, neighbor, goal) {
-  return (getEdgeCost(roads, car, neighbor) + getEuclideanDistance(neighbor, goal))
+  return (getEdgeCost(roads, car, neighbor) + getManhattanDistance(neighbor, goal))
 }
 
 # Return all available neighbors given a location
@@ -116,18 +126,6 @@ getNeighbors=function(x, y, xSize, ySize) {
   neighbors = neighbors[neighbors[,2] < ySize+1,]
 
   return (neighbors)
-}
-
-# Return the package goal for a search
-getGoalPackage=function(car, packages) {
-  if(is.null(car$mem$goalPackage)) {
-    # Pickup first unloaded package from the list (TODO: Find the closest pickup package)
-    packageIndex = which(packages[,5] %in% c(0) == TRUE)[1]
-    return (packages[packageIndex,])
-  } else {
-    # We are already driving towards a package, keep doing that
-    return (car$mem$goalPackage)
-  }
 }
 
 # Return true if node is goal, false otherwise
@@ -196,6 +194,28 @@ generateNextMove=function(visited) {
   }
   if (isTRUE(nextY < currY)) {
     return (2) # Down
+  }
+}
+
+# Return a package pickup location which will be used as the goal for a particular search
+getGoalPackage=function(car, packages) {
+  if(is.null(car$mem$goalPackage)) {
+    # Select closest package from current car's location as a pickup goal
+    costs = NULL
+    unpicked = packages[which(packages[,5] %in% c(0) == TRUE),]
+    if (isTRUE(length(unpicked) == 5)) {
+      # There's only 1 unpicked package left, go for it
+      return (unpicked)
+    } else {
+      for(i in 1:dim(unpicked)[1]) {
+        package = unpicked[i,]
+        costs = c(costs, getManhattanDistance(c(car$x, car$y), package))
+      }
+      return (unpicked[which.min(costs),])
+    }
+  } else {
+    # We are already driving towards a package, keep doing that
+    return (car$mem$goalPackage)
   }
 }
 
