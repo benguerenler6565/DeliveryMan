@@ -197,7 +197,7 @@ getGoalPackage=function(roads, car, packages) {
     return (unpicked)
   } else {
     for(i in 1:dim(unpicked)[1]) {
-      goal = unpicked[i,]
+      goal = unpicked[1,][1:2]
       visited = aStarSearch(goal, roads, car, packages)
       costs = c(costs, length(visited))
     }
