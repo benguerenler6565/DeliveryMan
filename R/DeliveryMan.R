@@ -37,8 +37,7 @@ PriorityQueue <- function() {
   }
   empty <- function() length(queueKeys) == 0
   getValueIndex <- function(value) which(queueValues %in% list(value) == TRUE)
-  getAllValues <- function() queueValues
-  list(insert = insert, pop = pop, empty = empty, getAllValues = getAllValues)
+  list(insert = insert, pop = pop, empty = empty)
 }
 
 # A simple lists which allows to insert elements on it
@@ -47,9 +46,8 @@ List <- function() {
   listValues <<- NULL
   insert <- function(value) listValues <<- c(listValues, list(value))
   exists <- function(value) isTRUE(which(listValues %in% list(value) == TRUE) > 0)
-  empty <- function() length(listValues) == 0
   getAllValues <- function() listValues
-  list(insert = insert, exists = exists, empty = empty, getAllValues = getAllValues)
+  list(insert = insert, exists = exists, getAllValues = getAllValues)
 }
 
 # Returns the Manhattan distance between two locations
@@ -64,34 +62,24 @@ getEuclideanDistance=function(from, to) {
 
 # Return the cost of a vertical edge
 getVerticalEdgeCost=function(roads, car, neighbor) {
-  tryCatch({
-    if(car$y < neighbor[2]) {
-      # Moving up
-      return (roads$vroads[car$y, car$x])
-    } else {
-      # Moving down
-      return (roads$vroads[neighbor[2], neighbor[1]])
-    }
-  }, error = function(e) {
-    print('Error on: getVerticalEdgeCost')
-    browser()
-  })
+  if(car$y < neighbor[2]) {
+    # Moving up
+    return (roads$vroads[car$y, car$x])
+  } else {
+    # Moving down
+    return (roads$vroads[neighbor[2], neighbor[1]])
+  }
 }
 
 # Return the cost of a horizontal edge
 getHorizontalEdgeCost=function(roads, car, neighbor) {
-  tryCatch({
-    if(car$x > neighbor[1]) {
-      # Moving left
-      return (roads$hroads[neighbor[2], neighbor[1]])
-    } else {
-      # Moving right
-      return (roads$hroads[car$y, car$x])
-    }
-  }, error = function(e) {
-    print('Error on: getHorizontalEdgeCost')
-    browser()
-  })
+  if(car$x > neighbor[1]) {
+    # Moving left
+    return (roads$hroads[neighbor[2], neighbor[1]])
+  } else {
+    # Moving right
+    return (roads$hroads[car$y, car$x])
+  }
 }
 
 # Calculate edge cost (from current position to neighbor position)
@@ -112,16 +100,15 @@ getCombinedCost=function(roads, car, neighbor, goal) {
 # Return all available neighbors given a location
 getNeighbors=function(x, y, xSize, ySize) {
   neighbors = matrix(, nrow = 4, ncol=2, byrow = TRUE)
-  # Add all possible horizontal neighbors
+  # Add all possible horizontal and vertical neighbors
   neighbors[,1] = c(x - 1, x, x, x + 1)
-  # Add all possible vertical neighbors
   neighbors[,2] = c(y, y + 1, y -1, y)
 
   # Remove all lower bound positions (< 0)
   neighbors = neighbors[neighbors[,1] > 0,]
   neighbors = neighbors[neighbors[,2] > 0,]
 
-  # Remove all out of bound positions too (< size of matrix)
+  # Remove all upper bound positions too (< size of matrix)
   neighbors = neighbors[neighbors[,1] < xSize+1,]
   neighbors = neighbors[neighbors[,2] < ySize+1,]
 
@@ -149,21 +136,22 @@ aStarSearch=function(goal, roads, car, packages) {
   while (!frontier$empty()) {
     # Get node with the least f on the frontier
     node = frontier$pop()
-    # Get node's neighbors
     neighbors = getNeighbors(node[1], node[2], xSize, ySize)
 
     for (i in 1:dim(neighbors)[1]) {
       neighbor = neighbors[i,]
       # Only search neighbors which hasn't already being visited
-      if(!visited$exists(neighbor)) {
-        if(isGoal(neighbor, goal)) {
-          # Return the visited path + current node as path to goal
-          return (c(visited$getAllValues(), list(node), list(goal)))
-        } else {
-          # Add neighbor to frontier
-          combinedCost = getCombinedCost(roads, car, neighbor, goal)
-          frontier$insert(combinedCost, neighbor)
-        }
+      if(visited$exists(neighbor)) {
+        next
+      }
+
+      if(isGoal(neighbor, goal)) {
+        # Return the visited path + current node as path to goal
+        return (c(visited$getAllValues(), list(node), list(goal[1:2])))
+      } else {
+        # Add neighbor to frontier
+        combinedCost = getCombinedCost(roads, car, neighbor, goal)
+        frontier$insert(combinedCost, neighbor)
       }
     }
 
@@ -194,27 +182,26 @@ generateNextMove=function(visited) {
   if (isTRUE(nextY < currY)) {
     return (2) # Down
   }
+
+  print('-------ERROR-------')
+  browser()
 }
 
 # Return a package pickup location which will be used as the goal for a particular search
-getGoalPackage=function(car, packages) {
-  if(is.null(car$mem$goalPackage)) {
-    # Select closest package from current car's location as a pickup goal
-    costs = NULL
-    unpicked = packages[which(packages[,5] %in% c(0) == TRUE),]
-    if (isTRUE(length(unpicked) == 5)) {
-      # There's only 1 unpicked package left, go for it
-      return (unpicked)
-    } else {
-      for(i in 1:dim(unpicked)[1]) {
-        package = unpicked[i,]
-        costs = c(costs, getManhattanDistance(c(car$x, car$y), package))
-      }
-      return (unpicked[which.min(costs),])
-    }
+getGoalPackage=function(roads, car, packages) {
+  # Select package with the least amount of moves as next pickup goal
+  costs = NULL
+  unpicked = packages[which(packages[,5] %in% c(0) == TRUE),]
+  if (isTRUE(length(unpicked) == 5)) {
+    # There's only 1 unpicked package left, go for it
+    return (unpicked)
   } else {
-    # We are already driving towards a package, keep doing that
-    return (car$mem$goalPackage)
+    for(i in 1:dim(unpicked)[1]) {
+      goal = unpicked[i,]
+      visited = aStarSearch(goal, roads, car, packages)
+      costs = c(costs, length(visited))
+    }
+    return (unpicked[which.min(costs),])
   }
 }
 
@@ -228,25 +215,17 @@ getDeliveryLocation=function(packages) {
   return (packages[which(packages[,5] %in% c(1) == TRUE),])
 }
 
-# Get next move to solve the DeliveryMan assignment using the A* search
+# Solve the DeliveryMan assignment using the A* search
 aStarSearchDM=function(roads, car, packages) {
-  nextMove = 0
+  goal = NULL
   if(isLoaded(car)) {
-    car$mem$goalPackage = NULL
     goal = getDeliveryLocation(packages)[3:4]
-    visited = aStarSearch(goal, roads, car, packages)
-    nextMove = generateNextMove(visited)
   } else {
-    # We want to remember if we are already 'driving' towards
-    # a package, otherwise we'll be trap in an infinite loop. So we save
-    # which package we are currently trying to pickup in 'mem$goalPackage'
-    car$mem$goalPackage = getGoalPackage(car, packages)
-    goal = car$mem$goalPackage[1:2]
-    visited = aStarSearch(goal, roads, car, packages)
-    nextMove = generateNextMove(visited)
+    goal = getGoalPackage(roads, car, packages)[1:2]
   }
 
-  car$nextMove = nextMove
+  visited = aStarSearch(goal, roads, car, packages)
+  car$nextMove = generateNextMove(visited)
   return (car)
 }
 
