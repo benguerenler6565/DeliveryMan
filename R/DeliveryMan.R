@@ -81,12 +81,12 @@ getVerticalEdgeCost=function(roads, car, neighbor) {
 # Return the cost of a horizontal edge
 getHorizontalEdgeCost=function(roads, car, neighbor) {
   tryCatch({
-    if(car$x < neighbor[1]) {
+    if(car$x > neighbor[1]) {
       # Moving left
       return (roads$hroads[neighbor[2], neighbor[1]])
     } else {
       # Moving right
-      return (roads$vroads[car$y, car$x])
+      return (roads$hroads[car$y, car$x])
     }
   }, error = function(e) {
     print('Error on: getHorizontalEdgeCost')
@@ -149,14 +149,13 @@ aStarSearch=function(goal, roads, car, packages) {
   while (!frontier$empty()) {
     # Get node with the least f on the frontier
     node = frontier$pop()
+    # Get node's neighbors
+    neighbors = getNeighbors(node[1], node[2], xSize, ySize)
 
-    # Only search this node if it hasn't been searched already
-    if(!visited$exists(node)) {
-      # Get node's neighbors
-      neighbors = getNeighbors(node[1], node[2], xSize, ySize)
-
-      for (i in 1:dim(neighbors)[1]) {
-        neighbor = neighbors[i,]
+    for (i in 1:dim(neighbors)[1]) {
+      neighbor = neighbors[i,]
+      # Only search neighbors which hasn't already being visited
+      if(!visited$exists(neighbor)) {
         if(isGoal(neighbor, goal)) {
           # Return the visited path + current node as path to goal
           return (c(visited$getAllValues(), list(node), list(goal)))
@@ -166,10 +165,10 @@ aStarSearch=function(goal, roads, car, packages) {
           frontier$insert(combinedCost, neighbor)
         }
       }
-
-      # Keep track of best path
-      visited$insert(node)
     }
+
+    # Keep track of best path
+    visited$insert(node)
   }
 }
 
