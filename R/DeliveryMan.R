@@ -31,9 +31,11 @@ PriorityQueue <- function() {
   }
   pop <- function() {
     head <- queueValues[[1]]
+    key <- queueKeys[[1]]
     queueValues <<- queueValues[-1]
     queueKeys <<- queueKeys[-1]
-    return (head)
+    # Notice we pop both the position at [1:2], and cost at [3]
+    return (c(head, key))
   }
   empty <- function() length(queueKeys) == 0
   getValueIndex <- function(value) which(queueValues %in% list(value) == TRUE)
@@ -45,7 +47,17 @@ PriorityQueue <- function() {
 List <- function() {
   listValues <<- NULL
   insert <- function(value) listValues <<- c(listValues, list(value))
-  exists <- function(value) isTRUE(which(listValues %in% list(value) == TRUE) > 0)
+  exists <- function(value) {
+    if(!isTRUE(is.null(listValues))) {
+      for(i in 1:length(listValues)) {
+        exists = list(listValues[[i]][1:2]) %in% list(value) == TRUE
+        if(isTRUE(exists)) {
+          return (TRUE)
+        }
+      }
+    }
+    return (FALSE)
+  }
   getAllValues <- function() listValues
   list(insert = insert, exists = exists, getAllValues = getAllValues)
 }
@@ -53,11 +65,6 @@ List <- function() {
 # Returns the Manhattan distance between two locations
 getManhattanDistance=function(from, to) {
   return (abs(from[1] - to[1]) + abs(from[2] - to[2]))
-}
-
-# Return the Euclidean distance between two locations
-getEuclideanDistance=function(from, to) {
-  return (sqrt((from[1] - to[1])^2 + (from[2] - to[2])^2))
 }
 
 # Return the cost of a vertical edge
@@ -150,7 +157,7 @@ aStarSearch=function(goal, roads, car, packages) {
 
         if(isGoal(neighbor, goal)) {
           # Return the visited path + current node as path to goal
-          return (c(visited$getAllValues(), list(node), list(goal[1:2])))
+          return (c(visited$getAllValues(), list(node), list(c(goal[1:2], 0))))
         } else {
           # Add neighbor to frontier
           combinedCost = getCombinedCost(roads, car, neighbor, goal)
@@ -191,8 +198,7 @@ generateNextMove=function(visited) {
     return (2) # Down
   }
 
-  print('-------ERROR-------')
-  browser()
+  print('Error! Unable to find a suitable move.')
 }
 
 # Return a package pickup location which will be used as the goal for a particular search
@@ -204,10 +210,15 @@ getGoalPackage=function(roads, car, packages) {
     # There's only 1 unpicked package left, go for it
     return (unpicked)
   } else {
+    # Return the package which has the lowest A* search as goal
     for(i in 1:dim(unpicked)[1]) {
-      goal = unpicked[1,][1:2]
+      goal = unpicked[i,][1:2]
       visited = aStarSearch(goal, roads, car, packages)
-      costs = c(costs, length(visited))
+      cost = 0
+      for (j in 1:length(visited)) {
+        cost = cost + visited[[j]][3]
+      }
+      costs = c(costs, cost)
     }
     return (unpicked[which.min(costs),])
   }
@@ -225,15 +236,34 @@ getDeliveryLocation=function(packages) {
 
 # Solve the DeliveryMan assignment using the A* search
 aStarSearchDM=function(roads, car, packages) {
-  goal = NULL
   if(isLoaded(car)) {
-    goal = getDeliveryLocation(packages)[3:4]
-  } else {
-    goal = getGoalPackage(roads, car, packages)[1:2]
-  }
+    # Clean up pickup path, we are now delivering
+    car$mem$pickupPath = NULL
 
-  visited = aStarSearch(goal, roads, car, packages)
-  car$nextMove = generateNextMove(visited)
+    # Verify if we have already calculated a path towards delivery location
+    shouldBuildDeliveryPath = is.null(car$mem$deliveryPath) || length(car$mem$deliveryPath) == 1
+    if(shouldBuildDeliveryPath) {
+      goal = getDeliveryLocation(packages)[3:4]
+      car$mem$deliveryPath = aStarSearch(goal, roads, car, packages)
+    }
+
+    car$nextMove = generateNextMove(car$mem$deliveryPath)
+    # Remove current move from selected path
+    car$mem$deliveryPath = car$mem$deliveryPath[-1]
+  } else {
+    # Clean up delivery path, we are now picking up
+    car$mem$deliveryPath = NULL
+
+    shouldBuildPickupPath = is.null(car$mem$pickupPath) || length(car$mem$pickupPath) == 1
+    if(shouldBuildPickupPath) {
+      goal = getGoalPackage(roads, car, packages)[1:2]
+      car$mem$pickupPath = aStarSearch(goal, roads, car, packages)
+    }
+
+    car$nextMove = generateNextMove(car$mem$pickupPath)
+    # Remove current move from selected path
+    car$mem$pickupPath = car$mem$pickupPath[-1]
+  }
   return (car)
 }
 
