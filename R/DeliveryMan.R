@@ -14,7 +14,7 @@ PriorityQueue <- function() {
     # delete previous one and insert this new one instead
     index = getValueIndex(value)
     if(length(index) > 0) {
-      if(isTRUE(key <= queueKeys[[index]])) {
+      if(isTRUE(key < queueKeys[[index]])) {
         queueKeys <<- queueKeys[-index]
         queueValues <<- queueValues[-index]
       } else {
@@ -111,7 +111,7 @@ getEdgeCost=function(roads, car, neighbor) {
 
 # Return the cost of an edge + a heuristic
 getCombinedCost=function(roads, car, neighbor, goal) {
-  return (getEdgeCost(roads, car, neighbor) + getLeastNumOfEdges(neighbor, goal))
+  return (getEdgeCost(roads, car, neighbor) + getManhattanDistance(neighbor, goal))
 }
 
 # Return all available neighbors given a location
@@ -155,7 +155,7 @@ aStarSearch=function(goal, roads, car, packages) {
     node = frontier$pop()
     if(isGoal(node, goal)) {
       # Return the visited path + current node as path to goal
-      return (c(visited$getAllValues(), list(node)))
+      return (c(visited$getAllValues(), list(c(node[1:2], 0))))
     }
 
     # Add node's neighbors to frontier if necessary
@@ -178,16 +178,12 @@ aStarSearch=function(goal, roads, car, packages) {
   }
 }
 
-# Given the list of visited nodes, return the best next move car can make towards goal
-generateNextMove=function(visited) {
-  if(isTRUE(is.null(visited)) || length(visited) == 1) {
-    return (5) # Current position is already goal
-  }
-
-  currX = visited[[1]][1]
-  currY = visited[[1]][2]
-  nextX = visited[[2]][1]
-  nextY = visited[[2]][2]
+# Given a path of nodes, return the best next move car can make towards goal
+generateNextMove=function(path) {
+  currX = path[[1]][1]
+  currY = path[[1]][2]
+  nextX = path[[2]][1]
+  nextY = path[[2]][2]
 
   # Move is horizontal
   if (isTRUE(nextX > currX)) {
@@ -250,10 +246,8 @@ aStarSearchDM=function(roads, car, packages) {
     goal = getGoalPackage(roads, car, packages)[1:2]
   }
 
-  visited = aStarSearch(goal, roads, car, packages)
-  print('--------------')
-  print(visited)
-  car$nextMove = generateNextMove(visited)
+  path = aStarSearch(goal, roads, car, packages)
+  car$nextMove = generateNextMove(path)
   return (car)
 }
 
