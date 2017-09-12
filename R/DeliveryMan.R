@@ -72,11 +72,6 @@ getEuclideanDistance=function(from, to) {
   return (sqrt((from[1] - to[1])^2 + (from[2] - to[2])^2))
 }
 
-# Minimum number of steps between a node and the goal
-getLeastNumOfEdges=function(from, to) {
-  return (abs(from[1]-to[1]) + abs(from[2]-to[2]))
-}
-
 # Return the cost of a vertical edge
 getVerticalEdgeCost=function(roads, car, neighbor) {
   if(car$y < neighbor[2]) {
