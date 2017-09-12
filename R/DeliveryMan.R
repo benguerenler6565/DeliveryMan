@@ -14,7 +14,7 @@ PriorityQueue <- function() {
     # delete previous one and insert this new one instead
     index = getValueIndex(value)
     if(length(index) > 0) {
-      if(isTRUE(key <= queueKeys[[index]])) {
+      if(isTRUE(key < queueKeys[[index]])) {
         queueKeys <<- queueKeys[-index]
         queueValues <<- queueValues[-index]
       } else {
@@ -72,41 +72,18 @@ getEuclideanDistance=function(from, to) {
   return (sqrt((from[1] - to[1])^2 + (from[2] - to[2])^2))
 }
 
-# Return the cost of a vertical edge
-getVerticalEdgeCost=function(roads, car, neighbor) {
-  if(car$y < neighbor[2]) {
-    # Moving up
-    return (roads$vroads[car$y, car$x])
-  } else {
-    # Moving down
-    return (roads$vroads[neighbor[2], neighbor[1]])
-  }
-}
-
-# Return the cost of a horizontal edge
-getHorizontalEdgeCost=function(roads, car, neighbor) {
-  if(car$x > neighbor[1]) {
-    # Moving left
-    return (roads$hroads[neighbor[2], neighbor[1]])
-  } else {
-    # Moving right
-    return (roads$hroads[car$y, car$x])
-  }
-}
-
 # Calculate edge cost (from current position to neighbor position)
-getEdgeCost=function(roads, car, neighbor) {
-  isMovingVertically = car$x == neighbor[1]
-  if(isMovingVertically) {
-    return (getVerticalEdgeCost(roads, car, neighbor))
-  } else {
-    return (getHorizontalEdgeCost(roads, car, neighbor))
-  }
+getEdgeCost=function(roads, path) {
+  browser()
+  # TODO: Implement edge costs
+  return (1)
 }
 
 # Return the cost of an edge + a heuristic
-getCombinedCost=function(roads, car, neighbor, goal) {
-  return (getEdgeCost(roads, car, neighbor) + getManhattanDistance(neighbor, goal))
+getCombinedCost=function(roads, path, goal) {
+  from = path[[1]][1:2]
+  to = path[[length(path)]][1:2]
+  return (getEdgeCost(roads, path) + getManhattanDistance(from, to))
 }
 
 # Return all available neighbors given a location
@@ -134,58 +111,52 @@ isGoal=function(neighbor, goal) {
 
 # Perform A* search from current car location towards goal
 aStarSearch=function(goal, roads, car, packages) {
-  startPosition = c(car$x, car$y)
-  if(isGoal(startPosition, goal)) {
-    return (NULL) # Current position is already goal
-  } else {
-    # Get the matrix size
-    xSize = dim(roads$hroads)[1]
-    ySize = dim(roads$vroads)[2]
+  # Get the matrix size
+  xSize = dim(roads$hroads)[1]
+  ySize = dim(roads$vroads)[2]
 
-    # Initialize visited and frontier lists
-    visited = List()
-    frontier = PriorityQueue()
-    # Put the starting location on the frontier (cost 0 is fine)
-    frontier$insert(0, startPosition)
+  # Initialize visited and frontier lists
+  visited = List()
+  frontier = PriorityQueue()
 
-    while (!frontier$empty()) {
-      # Get node with the least f on the frontier
-      node = frontier$pop()
-      neighbors = getNeighbors(node[1], node[2], xSize, ySize)
+  # Put the starting location on the frontier (cost 0 is fine)
+  frontier$insert(0, c(car$x, car$y))
 
-      for (i in 1:dim(neighbors)[1]) {
-        neighbor = neighbors[i,]
-        # Only search neighbors which hasn't already being visited
-        if(visited$exists(neighbor)) {
-          next
-        }
-
-        if(isGoal(neighbor, goal)) {
-          # Return the visited path + current node as path to goal
-          return (c(visited$getAllValues(), list(node), list(c(goal[1:2], 0))))
-        } else {
-          # Add neighbor to frontier
-          combinedCost = getCombinedCost(roads, car, neighbor, goal)
-          frontier$insert(combinedCost, neighbor)
-        }
-      }
-
-      # Keep track of best path
-      visited$insert(node)
+  while (!frontier$empty()) {
+    # Get node with the least f on the frontier
+    node = frontier$pop()
+    if(isGoal(node, goal)) {
+      # Return the visited path + current node as path to goal
+      return (c(visited$getAllValues(), list(c(node[1:2], 0))))
     }
+
+    # Add node's neighbors to frontier if necessary
+    neighbors = getNeighbors(node[1], node[2], xSize, ySize)
+    for (i in 1:dim(neighbors)[1]) {
+      neighbor = neighbors[i,]
+      # Only search neighbors which hasn't already being visited
+      # (which mean we already know a cheaper path)
+      if(visited$exists(neighbor)) {
+        next
+      } else {
+        # Add neighbor to frontier
+        path = c(visited$getAllValues(), list(c(node[1:2])), list(c(neighbor[1:2])))
+        combinedCost = getCombinedCost(roads, path, goal)
+        frontier$insert(combinedCost, neighbor)
+      }
+    }
+
+    # Keep track of best path
+    visited$insert(node)
   }
 }
 
-# Given the list of visited nodes, return the best next move car can make towards goal
-generateNextMove=function(visited) {
-  if(isTRUE(is.null(visited))) {
-    return (5) # Current position is already goal
-  }
-
-  currX = visited[[1]][1]
-  currY = visited[[1]][2]
-  nextX = visited[[2]][1]
-  nextY = visited[[2]][2]
+# Given a path of nodes, return the best next move car can make towards goal
+generateNextMove=function(path) {
+  currX = path[[1]][1]
+  currY = path[[1]][2]
+  nextX = path[[2]][1]
+  nextY = path[[2]][2]
 
   # Move is horizontal
   if (isTRUE(nextX > currX)) {
@@ -241,34 +212,15 @@ getDeliveryLocation=function(packages) {
 
 # Solve the DeliveryMan assignment using the A* search
 aStarSearchDM=function(roads, car, packages) {
+  goal = NULL
   if(isLoaded(car)) {
-    # Clean up pickup path, we are now delivering
-    car$mem$pickupPath = NULL
-
-    # Verify if we have already calculated a path towards delivery location
-    shouldBuildDeliveryPath = is.null(car$mem$deliveryPath) || length(car$mem$deliveryPath) == 1
-    if(shouldBuildDeliveryPath) {
-      goal = getDeliveryLocation(packages)[3:4]
-      car$mem$deliveryPath = aStarSearch(goal, roads, car, packages)
-    }
-
-    car$nextMove = generateNextMove(car$mem$deliveryPath)
-    # Remove current move from selected path
-    car$mem$deliveryPath = car$mem$deliveryPath[-1]
+    goal = getDeliveryLocation(packages)[3:4]
   } else {
-    # Clean up delivery path, we are now picking up
-    car$mem$deliveryPath = NULL
-
-    shouldBuildPickupPath = is.null(car$mem$pickupPath) || length(car$mem$pickupPath) == 1
-    if(shouldBuildPickupPath) {
-      goal = getGoalPackage(roads, car, packages)[1:2]
-      car$mem$pickupPath = aStarSearch(goal, roads, car, packages)
-    }
-
-    car$nextMove = generateNextMove(car$mem$pickupPath)
-    # Remove current move from selected path
-    car$mem$pickupPath = car$mem$pickupPath[-1]
+    goal = getGoalPackage(roads, car, packages)[1:2]
   }
+
+  path = aStarSearch(goal, roads, car, packages)
+  car$nextMove = generateNextMove(path)
   return (car)
 }
 
