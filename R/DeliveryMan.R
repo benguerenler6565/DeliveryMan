@@ -151,18 +151,18 @@ aStarSearch=function(goal, roads, car, packages) {
     while (!frontier$empty()) {
       # Get node with the least f on the frontier
       node = frontier$pop()
-      neighbors = getNeighbors(node[1], node[2], xSize, ySize)
 
+      # Return the visited path + current node as path to goal
+      if(isGoal(node, goal)) {
+        return (c(visited$getAllValues(), list(c(node[1:2], 0))))
+      }
+
+      neighbors = getNeighbors(node[1], node[2], xSize, ySize)
       for (i in 1:dim(neighbors)[1]) {
         neighbor = neighbors[i,]
         # Only search neighbors which hasn't already being visited
         if(visited$exists(neighbor)) {
           next
-        }
-
-        if(isGoal(neighbor, goal)) {
-          # Return the visited path + current node as path to goal
-          return (c(visited$getAllValues(), list(node), list(c(goal[1:2], 0))))
         } else {
           # Add neighbor to frontier
           combinedCost = getCombinedCost(roads, car, neighbor, goal)
@@ -241,34 +241,15 @@ getDeliveryLocation=function(packages) {
 
 # Solve the DeliveryMan assignment using the A* search
 aStarSearchDM=function(roads, car, packages) {
+  goal = NULL
   if(isLoaded(car)) {
-    # Clean up pickup path, we are now delivering
-    car$mem$pickupPath = NULL
-
-    # Verify if we have already calculated a path towards delivery location
-    shouldBuildDeliveryPath = is.null(car$mem$deliveryPath) || length(car$mem$deliveryPath) == 1
-    if(shouldBuildDeliveryPath) {
-      goal = getDeliveryLocation(packages)[3:4]
-      car$mem$deliveryPath = aStarSearch(goal, roads, car, packages)
-    }
-
-    car$nextMove = generateNextMove(car$mem$deliveryPath)
-    # Remove current move from selected path
-    car$mem$deliveryPath = car$mem$deliveryPath[-1]
+    goal = getDeliveryLocation(packages)[3:4]
   } else {
-    # Clean up delivery path, we are now picking up
-    car$mem$deliveryPath = NULL
-
-    shouldBuildPickupPath = is.null(car$mem$pickupPath) || length(car$mem$pickupPath) == 1
-    if(shouldBuildPickupPath) {
-      goal = getGoalPackage(roads, car, packages)[1:2]
-      car$mem$pickupPath = aStarSearch(goal, roads, car, packages)
-    }
-
-    car$nextMove = generateNextMove(car$mem$pickupPath)
-    # Remove current move from selected path
-    car$mem$pickupPath = car$mem$pickupPath[-1]
+    goal = getGoalPackage(roads, car, packages)[1:2]
   }
+
+  path = aStarSearch(goal, roads, car, packages)
+  car$nextMove = generateNextMove(path)
   return (car)
 }
 
