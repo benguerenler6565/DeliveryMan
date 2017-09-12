@@ -67,6 +67,11 @@ getManhattanDistance=function(from, to) {
   return (abs(from[1] - to[1]) + abs(from[2] - to[2]))
 }
 
+# Return the Euclidean distance between two locations
+getEuclideanDistance=function(from, to) {
+  return (sqrt((from[1] - to[1])^2 + (from[2] - to[2])^2))
+}
+
 # Return the cost of a vertical edge
 getVerticalEdgeCost=function(roads, car, neighbor) {
   if(car$y < neighbor[2]) {
