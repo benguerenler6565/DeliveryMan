@@ -72,6 +72,11 @@ getEuclideanDistance=function(from, to) {
   return (sqrt((from[1] - to[1])^2 + (from[2] - to[2])^2))
 }
 
+# Minimum number of steps between a node and the goal
+getLeastNumOfEdges=function(from, to) {
+  return (abs(from[1]-to[1]) + abs(from[2]-to[2]))
+}
+
 # Return the cost of a vertical edge
 getVerticalEdgeCost=function(roads, car, neighbor) {
   if(car$y < neighbor[2]) {
@@ -106,7 +111,7 @@ getEdgeCost=function(roads, car, neighbor) {
 
 # Return the cost of an edge + a heuristic
 getCombinedCost=function(roads, car, neighbor, goal) {
-  return (getEdgeCost(roads, car, neighbor) + getManhattanDistance(neighbor, goal))
+  return (getEdgeCost(roads, car, neighbor) + getLeastNumOfEdges(neighbor, goal))
 }
 
 # Return all available neighbors given a location
@@ -134,53 +139,48 @@ isGoal=function(neighbor, goal) {
 
 # Perform A* search from current car location towards goal
 aStarSearch=function(goal, roads, car, packages) {
-  startPosition = c(car$x, car$y)
-  if(isGoal(startPosition, goal)) {
-    return (NULL) # Current position is already goal
-  } else {
-    # Get the matrix size
-    xSize = dim(roads$hroads)[1]
-    ySize = dim(roads$vroads)[2]
+  # Get the matrix size
+  xSize = dim(roads$hroads)[1]
+  ySize = dim(roads$vroads)[2]
 
-    # Initialize visited and frontier lists
-    visited = List()
-    frontier = PriorityQueue()
+  # Initialize visited and frontier lists
+  visited = List()
+  frontier = PriorityQueue()
 
-    # Put the starting location on the frontier (cost 0 is fine)
-    frontier$insert(0, startPosition)
+  # Put the starting location on the frontier (cost 0 is fine)
+  frontier$insert(0, c(car$x, car$y))
 
-    while (!frontier$empty()) {
-      # Get node with the least f on the frontier
-      node = frontier$pop()
-      if(isGoal(node, goal)) {
-        # Return the visited path + current node as path to goal
-        return (c(visited$getAllValues(), list(node)))
-      }
-
-      # Add node's neighbors to frontier if necessary
-      neighbors = getNeighbors(node[1], node[2], xSize, ySize)
-      for (i in 1:dim(neighbors)[1]) {
-        neighbor = neighbors[i,]
-        # Only search neighbors which hasn't already being visited
-        # (which mean we already know a cheaper path)
-        if(visited$exists(neighbor)) {
-          next
-        } else {
-          # Add neighbor to frontier
-          combinedCost = getCombinedCost(roads, car, neighbor, goal)
-          frontier$insert(combinedCost, neighbor)
-        }
-      }
-
-      # Keep track of best path
-      visited$insert(node)
+  while (!frontier$empty()) {
+    # Get node with the least f on the frontier
+    node = frontier$pop()
+    if(isGoal(node, goal)) {
+      # Return the visited path + current node as path to goal
+      return (c(visited$getAllValues(), list(node)))
     }
+
+    # Add node's neighbors to frontier if necessary
+    neighbors = getNeighbors(node[1], node[2], xSize, ySize)
+    for (i in 1:dim(neighbors)[1]) {
+      neighbor = neighbors[i,]
+      # Only search neighbors which hasn't already being visited
+      # (which mean we already know a cheaper path)
+      if(visited$exists(neighbor)) {
+        next
+      } else {
+        # Add neighbor to frontier
+        combinedCost = getCombinedCost(roads, car, neighbor, goal)
+        frontier$insert(combinedCost, neighbor)
+      }
+    }
+
+    # Keep track of best path
+    visited$insert(node)
   }
 }
 
 # Given the list of visited nodes, return the best next move car can make towards goal
 generateNextMove=function(visited) {
-  if(isTRUE(is.null(visited))) {
+  if(isTRUE(is.null(visited)) || length(visited) == 1) {
     return (5) # Current position is already goal
   }
 
@@ -251,6 +251,8 @@ aStarSearchDM=function(roads, car, packages) {
   }
 
   visited = aStarSearch(goal, roads, car, packages)
+  print('--------------')
+  print(visited)
   car$nextMove = generateNextMove(visited)
   return (car)
 }
