@@ -208,6 +208,10 @@ aStarSearch=function(from, to, roads, packages) {
 
 # Given a path, return the best next move car can make towards goal
 generateNextMove=function(path) {
+  if(isTRUE(length(path) == 1)) {
+    return (5) # Current position is already goal
+  }
+
   currX = path[[1]][1]
   currY = path[[1]][2]
   nextX = path[[2]][1]
