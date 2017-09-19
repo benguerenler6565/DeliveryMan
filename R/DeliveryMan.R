@@ -247,11 +247,8 @@ getGoalPackage=function(from, packages) {
   } else {
     # Select closest package to current location using Manhattan distance
     for(i in 1:dim(unpicked)[1]) {
-      pikcupLocation = unpicked[i,][1:2]
-      deliveryLocation = unpicked[i,][3:4]
-      pickupCost = getManhattanDistance(from, pikcupLocation)
-      deliveryCost = getManhattanDistance(pikcupLocation, deliveryLocation)
-      costs = c(costs, pickupCost + deliveryCost)
+      to = unpicked[i,][1:2]
+      costs = c(costs, getManhattanDistance(from, to))
     }
     return (unpicked[which.min(costs),])
   }
