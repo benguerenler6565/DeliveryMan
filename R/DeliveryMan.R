@@ -4,6 +4,19 @@ dumbDM=function(roads,car,packages){
   return (car)
 }
 
+averageTest <- function(tests){
+  sum = 0
+  for (i in 1:tests) {
+    sum=sum+runDeliveryMan(aStarSearchDM, dim = 10, turns = 2000, doPlot = F, pause = 0, del = 5)
+    if(i%%10==0){
+      print(i)
+      print(sum/i)
+    }
+  }
+  print(sum/i)
+  return(0)
+}
+
 # A priority queue which allows to insert elements
 # and order them by priority
 # Source: http://rosettacode.org/wiki/Priority_queue#R
