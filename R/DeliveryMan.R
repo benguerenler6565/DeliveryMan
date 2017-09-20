@@ -257,10 +257,15 @@ getGoalPackage=function(from, packages) {
     # There's only 1 unpicked package left, go for it
     return (unpicked)
   } else {
+    deliveryWeight = 0.7
     # Select closest package to current location using Manhattan distance
     for(i in 1:dim(unpicked)[1]) {
-      to = unpicked[i,][1:2]
-      costs = c(costs, getManhattanDistance(from, to))
+      package = unpicked[i,]
+      pickupLocation = package[1:2]
+      deliveryLocation = package[3:4]
+      pickupCost = getManhattanDistance(from, pickupLocation)
+      deliveryCost = getManhattanDistance(pickupLocation, deliveryLocation)
+      costs = c(costs, pickupCost + (deliveryCost*deliveryWeight))
     }
     return (unpicked[which.min(costs),])
   }
