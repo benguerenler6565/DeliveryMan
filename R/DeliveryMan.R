@@ -98,9 +98,8 @@ getEdgeCost=function(roads, path) {
 
 # Return the cost of an edge + a heuristic
 getCombinedCost=function(roads, path, goal) {
-  from = path[[1]][1:2]
   to = path[[length(path)]][1:2]
-  return (getEdgeCost(roads, path) + getManhattanDistance(from, to))
+  return (getEdgeCost(roads, path) + getManhattanDistance(to, goal))
 }
 
 # Return all available neighbors given a location
