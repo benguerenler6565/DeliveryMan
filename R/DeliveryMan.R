@@ -32,7 +32,7 @@ PriorityQueue <- function() {
         queueValues <<- queueValues[-index]
       } else {
         # Ignore it, we already have a cheaper path
-        return (NULL)
+        return (-1)
       }
     }
 
@@ -74,24 +74,24 @@ getEuclideanDistance=function(from, to) {
 }
 
 # Return the cost of a vertical edge
-getVerticalEdgeCost=function(roads, currentNode, node) {
-  if(currentNode[2] < node[2]) {
+getVerticalEdgeCost=function(roads, from, to) {
+  if(from[2] < to[2]) {
     # Moving up
-    return (roads$vroads[currentNode[2], currentNode[1]])
+    return (roads$vroads[from[2], from[1]])
   } else {
     # Moving down
-    return (roads$vroads[node[2], node[1]])
+    return (roads$vroads[to[2], to[1]])
   }
 }
 
 # Return the cost of a horizontal edge
-getHorizontalEdgeCost=function(roads, currentNode, node) {
-  if(currentNode[1] > node[1]) {
+getHorizontalEdgeCost=function(roads, from, to) {
+  if(from[1] > to[1]) {
     # Moving left
-    return (roads$hroads[node[2], node[1]])
+    return (roads$hroads[to[2], to[1]])
   } else {
     # Moving right
-    return (roads$hroads[currentNode[2], currentNode[1]])
+    return (roads$hroads[from[2], from[1]])
   }
 }
 
@@ -203,13 +203,19 @@ aStarSearch=function(from, to, roads, packages) {
       if(visited$exists(neighbor)) {
         next
       } else {
-        # Save visited path towards this neighbor
-        path[transformNodeToString(neighbor)] = transformNodeToString(node)
-        visitedPath = generatePath(from, neighbor, path)
+        # Temporarily save visited path towards this neighbor
+        tempPath = path
+        tempPath[transformNodeToString(neighbor)] = transformNodeToString(node)
 
-        # Add neighbor to frontier
-        combinedCost = getCombinedCost(roads, visitedPath, to)
-        frontier$insert(combinedCost, neighbor)
+        # Attempt to add neighbor to frontier
+        combinedCost = getCombinedCost(roads, generatePath(from, neighbor, tempPath), to)
+        inserted = frontier$insert(combinedCost, neighbor)
+
+        # Add neighbor to path only if it was inserted in the frontier
+        wasInserted = length(inserted) != 1 || inserted[[1]][1] != -1
+        if (isTRUE(wasInserted)) {
+          path[transformNodeToString(neighbor)] = transformNodeToString(node)
+        }
       }
     }
 
@@ -221,7 +227,8 @@ aStarSearch=function(from, to, roads, packages) {
 # Given a path, return the best next move car can make towards goal
 generateNextMove=function(path) {
   if(isTRUE(length(path) == 1)) {
-    return (5) # Current position is already goal
+    # This happens when the package pickup and delivery locations are equal
+    return (5)
   }
 
   currX = path[[1]][1]
@@ -287,9 +294,15 @@ aStarSearchDM=function(roads, car, packages) {
   from = c(car$x, car$y)
   to = NULL
   if(isLoaded(car)) {
+    car$mem$goalPackage = NULL
     to = getDeliveryLocation(packages)[3:4]
   } else {
-    to = getGoalPackage(from, packages)[1:2]
+    if(isTRUE(is.null(car$mem$goalPackage))) {
+      to = getGoalPackage(from, packages)[1:2]
+      car$mem$goalPackage = to
+    } else {
+      to = car$mem$goalPackage
+    }
   }
 
   path = aStarSearch(from, to, roads, packages)
