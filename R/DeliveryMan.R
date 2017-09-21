@@ -265,8 +265,8 @@ getGoalPackage=function(from, packages) {
     return (unpicked)
   } else {
     # Compute a weighted package + delivery location distance and choose the least of all
-    pickupWeight = 0.9
-    deliveryWeight = 0.3
+    pickupWeight = 1
+    deliveryWeight = 0
     for(i in 1:dim(unpicked)[1]) {
       package = unpicked[i,]
       pickupLocation = package[1:2]
