@@ -294,15 +294,9 @@ aStarSearchDM=function(roads, car, packages) {
   from = c(car$x, car$y)
   to = NULL
   if(isLoaded(car)) {
-    car$mem$goalPackage = NULL
     to = getDeliveryLocation(packages)[3:4]
   } else {
-    if(isTRUE(is.null(car$mem$goalPackage))) {
-      to = getGoalPackage(from, packages)[1:2]
-      car$mem$goalPackage = to
-    } else {
-      to = car$mem$goalPackage
-    }
+    to = getGoalPackage(from, packages)[1:2]
   }
 
   path = aStarSearch(from, to, roads, packages)
