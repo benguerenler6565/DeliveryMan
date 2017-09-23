@@ -1,3 +1,8 @@
+# Authors:
+# Arianna Delsante - 940929-T300
+# Bengü Erenler - 940519-T520
+# Diego Castillo - 911206-T438
+
 ?seq.along
 dumbDM=function(roads,car,packages){
   car$nextMove=sample(c(2,4,6,8),1)
